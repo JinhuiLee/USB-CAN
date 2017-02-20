@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="org.usb4java.Context"/>
+<fullyQualifiedTypeName name="org.usb4java.LibUsb"/>
+<fullyQualifiedTypeName name="org.usb4java.LibUsbException"/>
+<fullyQualifiedTypeName name="org.usb4java.Device"/>
+<fullyQualifiedTypeName name="org.usb4java.DeviceList"/>
+<fullyQualifiedTypeName name="org.usb4java.DeviceDescriptor"/>
+<fullyQualifiedTypeName name="org.usb4java.DeviceHandle"/>
+<fullyQualifiedTypeName name="java.nio.ByteBuffer"/>
+</qualifiedTypeNameHistroy>

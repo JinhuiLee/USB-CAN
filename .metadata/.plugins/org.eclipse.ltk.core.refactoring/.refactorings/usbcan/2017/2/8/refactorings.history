@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename compilation unit &apos;com.itu.Usbdriver.java&apos; to &apos;UsbDriver.java&apos;&#x0D;&#x0A;- Original project: &apos;usbcan&apos;&#x0D;&#x0A;- Original element: &apos;com.itu.Usbdriver.java&apos;&#x0D;&#x0A;- Renamed element: &apos;com.itu.UsbDriver.java&apos;" description="Rename compilation unit &apos;Usbdriver.java&apos;" flags="2" id="org.eclipse.jdt.ui.rename.compilationunit" input="/src&lt;com.itu{Usbdriver.java" name="UsbDriver.java" references="false" stamp="1487540659600" version="1.0"/>
+</session>

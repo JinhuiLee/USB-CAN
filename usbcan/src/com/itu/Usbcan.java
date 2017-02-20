@@ -124,36 +124,8 @@ public class Usbcan {
 	
 	
 	public static void main(String[] args) {
-		System.out.println("hello word");
-		Context context = new Context();
-		int result = LibUsb.init(context);
-		if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to initialize libusb.", result);
-		short vendorId = 1155, productId = 1638;
-		//short vendorId = 1003, productId = 8465;
-		Device device = findDevice(vendorId,productId);
-
-		DeviceHandle handle = new DeviceHandle();
-		result = LibUsb.open(device, handle);
-		if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to open USB device", result);
-		try
-		{
-			System.out.println("Ok ");
-		    // Use device handle here
-			result = LibUsb.claimInterface(handle , 0);
-			if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to claim interface", result);
-//			byte[] SendBuff = new byte[6];
-//	        int i = 0;
-//	        SendBuff[i++] = (byte)(11);
-//	        SendBuff[i++] = (byte)(22);
-//	        SendBuff[i++] = (byte)(33);
-//	        SendBuff[i++] = (byte)(44);
-//	        SendBuff[i++] = (byte)(55);
-//	        SendBuff[i++] = (byte)(66);
-//			write(handle,SendBuff);
-//			ByteBuffer header = read(handle, 24);
-//	        header.position(12);
-//	        int dataSize = header.asIntBuffer().get();
-			
+		
+			UsbDriver driver = new UsbDriver();
 			VCI_INIT_CONFIG_EX pInitConfig = new VCI_INIT_CONFIG_EX();
 			
 			int CANIndex = 0;
@@ -209,27 +181,20 @@ public class Usbcan {
 	        //ControlCAN controlCAN = this;
 	        //synchronized (controlCAN) {
 	            //block5 : {
-            int ret = USB_SendMsg(handle, msg);
-            if (ret != 0) {
-                System.out.print("sent fail");
-            }
-            
-            ByteBuffer bb = read(handle, 512);
-            System.out.println(bb.get());
+	        while (true) {
+	            int ret = driver.USB_SendMsg(msg);
+	            
+	            
+	            byte res = driver.USB_GetStatus();
+	            System.out.println(res);
+	        }
 	                //if (msg.STATUS.MSG_CAN_NINT_OK == this.USB_Driver.USB_GetStatus()) break block5;
 	            
 			
 	        
 	        
-	        
-			
-		}
-		finally
-		{
-		    LibUsb.close(handle);
-		}
+	
 		
-		
-		LibUsb.exit(context);
+		 
 	}
 }

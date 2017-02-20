@@ -1,0 +1,205 @@
+package com.itu;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
+
+import org.usb4java.BufferUtils;
+import org.usb4java.Context;
+import org.usb4java.Device;
+import org.usb4java.DeviceDescriptor;
+import org.usb4java.DeviceHandle;
+import org.usb4java.DeviceList;
+import org.usb4java.LibUsb;
+import org.usb4java.LibUsbException;
+
+public class Usbcan {
+	
+
+	/** The ADB input endpoint of the Samsung Galaxy Nexus. */
+    private static final byte IN_ENDPOINT = (byte) 0x82;
+
+    /** The ADB output endpoint of the Samsung Galaxy Nexus. */
+    private static final byte OUT_ENDPOINT = 0x02;
+    
+    private static final int TIMEOUT = 5000;
+    
+	static public Device findDevice(short vendorId, short productId)
+	{
+	    // Read the USB device list
+	    DeviceList list = new DeviceList();
+	    int result = LibUsb.getDeviceList(null, list);
+	    if (result < 0) throw new LibUsbException("Unable to get device list", result);
+
+	    try
+	    {
+	        // Iterate over all devices and scan for the right one
+	        for (Device device: list)
+	        {
+	            DeviceDescriptor descriptor = new DeviceDescriptor();
+	            result = LibUsb.getDeviceDescriptor(device, descriptor);
+	            
+//	            System.out.println(descriptor.idVendor());
+//	            System.out.println(descriptor.idProduct());
+	            
+	            if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to read device descriptor", result);
+	            if ( descriptor.idVendor() == vendorId && descriptor.idProduct() == productId) { 
+	            	System.out.println("found can bus");
+	            	return device;
+	            	
+	            }
+	        }
+	    }
+	    finally
+	    {
+	        // Ensure the allocated device list is freed
+	    	//System.out.println("Exception");
+	        //LibUsb.freeDeviceList(list, true);
+	    }
+
+	    // Device not found
+	    return null;
+	}
+	
+	public static int USB_SendMsg(DeviceHandle handle, S_MSG msg) {
+        int ret;
+        byte[] SendBuff = new byte[300];
+        int i = 0;
+        SendBuff[i++] = (byte)(msg.message >> 24);
+        SendBuff[i++] = (byte)(msg.message >> 16);
+        SendBuff[i++] = (byte)(msg.message >> 8);
+        SendBuff[i++] = (byte)(msg.message >> 0);
+        SendBuff[i++] = msg.PackNum;
+        SendBuff[i++] = (byte)(msg.size >> 8);
+        SendBuff[i++] = (byte)(msg.size >> 0);
+        if (msg.size > 0) {
+            int j = 0;
+            while (j < msg.size) {
+                SendBuff[i++] = msg.buffer[j];
+                ++j;
+            }
+        }
+        write(handle, SendBuff);
+        return 0;
+    }
+	
+	public static void write(DeviceHandle handle, byte[] data)
+    {
+        ByteBuffer buffer = BufferUtils.allocateByteBuffer(data.length);
+        
+        buffer.put(data);
+        IntBuffer transferred = BufferUtils.allocateIntBuffer();
+        int result = LibUsb.bulkTransfer(handle, OUT_ENDPOINT, buffer,
+            transferred, TIMEOUT);
+        if (result != LibUsb.SUCCESS)
+        {
+            throw new LibUsbException("Unable to send data", result);
+        }
+        System.out.println(transferred.get() + " bytes sent to device");
+    }
+
+    /**
+     * Reads some data from the device.
+     * 
+     * @param handle
+     *            The device handle.
+     * @param size
+     *            The number of bytes to read from the device.
+     * @return The read data.
+     */
+    public static ByteBuffer read(DeviceHandle handle, int size)
+    {
+        ByteBuffer buffer = BufferUtils.allocateByteBuffer(size).order(
+            ByteOrder.LITTLE_ENDIAN);
+        IntBuffer transferred = BufferUtils.allocateIntBuffer();
+        int result = LibUsb.bulkTransfer(handle, IN_ENDPOINT, buffer,
+            transferred, TIMEOUT);
+        if (result != LibUsb.SUCCESS)
+        {
+            throw new LibUsbException("Unable to read data", result);
+        }
+        System.out.println(transferred.get() + " bytes read from device");
+        return buffer;
+    }
+	
+	
+	public static void main(String[] args) {		
+			VCI_INIT_CONFIG_EX pInitConfig = new VCI_INIT_CONFIG_EX();
+			
+			int CANIndex = 0;
+			
+			int i;
+	        S_MSG msg = new S_MSG(64);
+	        int n = i = 0;
+	        i = (short)(n + 1);
+	        msg.buffer[n] = (byte)(CANIndex + 1);
+	        int n2 = i;
+	        i = (short)(n2 + 1);
+	        msg.buffer[n2] = 0;
+	        int n3 = i;
+	        i = (short)(n3 + 1);
+	        msg.buffer[n3] = (byte)(pInitConfig.CAN_ABOM % 2);
+	        int n4 = i;
+	        i = (short)(n4 + 1);
+	        msg.buffer[n4] = 0;
+	        int n5 = i;
+	        i = (short)(n5 + 1);
+	        msg.buffer[n5] = (byte)(pInitConfig.CAN_NART % 2);
+	        int n6 = i;
+	        i = (short)(n6 + 1);
+	        msg.buffer[n6] = (byte)(pInitConfig.CAN_RFLM % 2);
+	        int n7 = i;
+	        i = (short)(n7 + 1);
+	        msg.buffer[n7] = (byte)(pInitConfig.CAN_TXFP % 2);
+	        int n8 = i;
+	        i = (short)(n8 + 1);
+	        msg.buffer[n8] = (byte)(pInitConfig.CAN_Mode % 4);
+	        int n9 = i;
+	        i = (short)(n9 + 1);
+	        msg.buffer[n9] = (byte) (pInitConfig.CAN_SJW > 0 ? (pInitConfig.CAN_SJW - 1) % 4 : 0);
+	        int n10 = i;
+	        i = (short)(n10 + 1);
+	        msg.buffer[n10] = (byte) (pInitConfig.CAN_BS1 > 0 ? (pInitConfig.CAN_BS1 - 1) % 16 : 0);
+	        int n11 = i;
+	        i = (short)(n11 + 1);
+	        msg.buffer[n11] = (byte) (pInitConfig.CAN_BS2 > 0 ? (pInitConfig.CAN_BS2 - 1) % 8 : 0);
+	        int n12 = i;
+	        i = (short)(n12 + 1);
+	        msg.buffer[n12] = (byte)(pInitConfig.CAN_BRP >> 8);
+	        int n13 = i;
+	        i = (short)(n13 + 1);
+	        msg.buffer[n13] = (byte)pInitConfig.CAN_BRP;
+	        int n14 = i;
+	        i = (short)(n14 + 1);
+	        msg.buffer[n14] = pInitConfig.CAN_RELAY;
+	        msg.size = (short) i;
+	        System.out.println(i);
+	        msg.PackNum = 0;
+	        msg.message = msg.MSG.MSG_VT_CAN_INIT;
+	        //ControlCAN controlCAN = this;
+	        //synchronized (controlCAN) {
+	            //block5 : {
+            int ret = USB_SendMsg(handle, msg);
+            if (ret != 0) {
+                System.out.print("sent fail");
+            }
+            
+            ByteBuffer bb = read(handle, 512);
+            System.out.println(bb.get());
+	                //if (msg.STATUS.MSG_CAN_NINT_OK == this.USB_Driver.USB_GetStatus()) break block5;
+	            
+			
+	        
+	        
+	        
+			
+		}
+		finally
+		{
+		    LibUsb.close(handle);
+		}
+		
+		
+		LibUsb.exit(context);
+	}
+}
