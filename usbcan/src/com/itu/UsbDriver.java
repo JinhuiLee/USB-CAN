@@ -53,7 +53,7 @@ public class UsbDriver {
 		int result = LibUsb.init(context);
 		if (result != LibUsb.SUCCESS) throw new LibUsbException("Unable to initialize libusb.", result);
         this.usbDevice = this.ScanDevices();
-        OpenDevice();
+//        OpenDevice();
     }
 
     public Device ScanDevices() {
@@ -98,9 +98,9 @@ public class UsbDriver {
 		return result;
     }
 
-    public int USBWriteData(byte[] writebuffer, int length, int timeout) {
-    	ByteBuffer buffer = BufferUtils.allocateByteBuffer(writebuffer.length);
-        buffer.put(writebuffer);
+    public synchronized int USBWriteData(byte[] writebuffer, int length, int timeout) {
+    	ByteBuffer buffer = BufferUtils.allocateByteBuffer(length);
+        buffer.put(writebuffer,0,length);
         IntBuffer transferred = BufferUtils.allocateIntBuffer();
         int result = LibUsb.bulkTransfer(handle, OUT_ENDPOINT, buffer,
             transferred, timeout);
@@ -109,11 +109,12 @@ public class UsbDriver {
             throw new LibUsbException("Unable to send data", result);
         }
         int res = 0;
-        System.out.println(( res = transferred.get() )+ " bytes sent to device");
+        res = transferred.get();
+        //System.out.println(( res = transferred.get() )+ " bytes sent to device");
         return res;
     }
 
-    public int USBReadData(byte[] readbuffer, int length, int timeout) {
+    public synchronized int USBReadData(byte[] readbuffer, int length, int timeout) {
     	ByteBuffer buffer = BufferUtils.allocateByteBuffer(length).order(
                 ByteOrder.LITTLE_ENDIAN);
         IntBuffer transferred = BufferUtils.allocateIntBuffer();
@@ -122,9 +123,11 @@ public class UsbDriver {
         if (result != LibUsb.SUCCESS)
         {
             throw new LibUsbException("Unable to read data", result);
+        	//return 0;
         }
         int res = 0;
-        System.out.println((res = transferred.get()) + " bytes read from device");
+        res = transferred.get();
+        //System.out.println((res = transferred.get()) + " bytes read from device");
   
         // transfer bytes from this buffer into the given destination array
         buffer.get(readbuffer, 0, length);
@@ -150,7 +153,7 @@ public class UsbDriver {
                 ++j;
             }
         }
-        if ((ret = this.USBWriteData(SendBuff, i, 500)) != i) {
+        if ((ret = this.USBWriteData(SendBuff, i, 1000)) != i) {
             return -5;
         }
         return 0;

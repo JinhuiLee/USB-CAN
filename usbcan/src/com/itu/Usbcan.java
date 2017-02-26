@@ -124,77 +124,160 @@ public class Usbcan {
 	
 	
 	public static void main(String[] args) {
-		
-			UsbDriver driver = new UsbDriver();
-			VCI_INIT_CONFIG_EX pInitConfig = new VCI_INIT_CONFIG_EX();
-			
-			int CANIndex = 0;
-			
-			int i;
-	        S_MSG msg = new S_MSG(64);
-	        int n = i = 0;
-	        i = (short)(n + 1);
-	        msg.buffer[n] = (byte)(CANIndex + 1);
-	        int n2 = i;
-	        i = (short)(n2 + 1);
-	        msg.buffer[n2] = 0;
-	        int n3 = i;
-	        i = (short)(n3 + 1);
-	        msg.buffer[n3] = (byte)(pInitConfig.CAN_ABOM % 2);
-	        int n4 = i;
-	        i = (short)(n4 + 1);
-	        msg.buffer[n4] = 0;
-	        int n5 = i;
-	        i = (short)(n5 + 1);
-	        msg.buffer[n5] = (byte)(pInitConfig.CAN_NART % 2);
-	        int n6 = i;
-	        i = (short)(n6 + 1);
-	        msg.buffer[n6] = (byte)(pInitConfig.CAN_RFLM % 2);
-	        int n7 = i;
-	        i = (short)(n7 + 1);
-	        msg.buffer[n7] = (byte)(pInitConfig.CAN_TXFP % 2);
-	        int n8 = i;
-	        i = (short)(n8 + 1);
-	        msg.buffer[n8] = (byte)(pInitConfig.CAN_Mode % 4);
-	        int n9 = i;
-	        i = (short)(n9 + 1);
-	        msg.buffer[n9] = (byte) (pInitConfig.CAN_SJW > 0 ? (pInitConfig.CAN_SJW - 1) % 4 : 0);
-	        int n10 = i;
-	        i = (short)(n10 + 1);
-	        msg.buffer[n10] = (byte) (pInitConfig.CAN_BS1 > 0 ? (pInitConfig.CAN_BS1 - 1) % 16 : 0);
-	        int n11 = i;
-	        i = (short)(n11 + 1);
-	        msg.buffer[n11] = (byte) (pInitConfig.CAN_BS2 > 0 ? (pInitConfig.CAN_BS2 - 1) % 8 : 0);
-	        int n12 = i;
-	        i = (short)(n12 + 1);
-	        msg.buffer[n12] = (byte)(pInitConfig.CAN_BRP >> 8);
-	        int n13 = i;
-	        i = (short)(n13 + 1);
-	        msg.buffer[n13] = (byte)pInitConfig.CAN_BRP;
-	        int n14 = i;
-	        i = (short)(n14 + 1);
-	        msg.buffer[n14] = pInitConfig.CAN_RELAY;
-	        msg.size = (short) i;
-	        System.out.println(i);
-	        msg.PackNum = 0;
-	        msg.message = msg.MSG.MSG_VT_CAN_INIT;
-	        //ControlCAN controlCAN = this;
-	        //synchronized (controlCAN) {
-	            //block5 : {
-	        while (true) {
-	            int ret = driver.USB_SendMsg(msg);
-	            
-	            
-	            byte res = driver.USB_GetStatus();
-	            System.out.println(res);
+		UsbDriver usbDriver = new UsbDriver();
+		ControlCAN controlCan = new ControlCAN(usbDriver);
+		// Scan device
+        Device mUsbDevice = controlCan.VCI_ScanDevice();
+        if(mUsbDevice == null){
+            System.out.println("No device connected");
+            return;
+        }
+
+        // Open device
+        int ret = controlCan.VCI_OpenDevice();
+        if(ret != ErrorType.ERR_SUCCESS){
+            System.out.println("Open device error!\n");
+            System.out.println(String.format("Error code: %d\n",ret));
+            return;
+        }else{
+            System.out.println("Open device success!\n");
+        }
+
+        VCI_INIT_CONFIG_EX CAN_InitEx = new VCI_INIT_CONFIG_EX();
+        CAN_InitEx.CAN_ABOM = 0;//Automatic bus-off management
+        // Loop back
+        CAN_InitEx.CAN_Mode = 0;
+        //1Mbps
+        CAN_InitEx.CAN_BRP = 12;
+        CAN_InitEx.CAN_BS1 = 4;
+        CAN_InitEx.CAN_BS2 = 1;
+        CAN_InitEx.CAN_SJW = 1;
+        CAN_InitEx.CAN_NART = 1;//No automatic retransmission
+        CAN_InitEx.CAN_RFLM = 0;//Receive FIFO locked mode
+        CAN_InitEx.CAN_TXFP = 1;//Transmit FIFO priority
+        CAN_InitEx.CAN_RELAY = 0;
+        ret = controlCan.VCI_InitCANEx((byte)0, CAN_InitEx);
+        if(ret != ErrorType.ERR_SUCCESS){
+            System.out.println("Init device failed!\n");
+            System.out.println(String.format("Error code: %d\n",ret));
+            return;
+        }else{
+            System.out.println("Init device success!\n");
+        }
+        //Set filter
+        VCI_FILTER_CONFIG CAN_FilterConfig = new VCI_FILTER_CONFIG();
+        CAN_FilterConfig.FilterIndex = 0;
+        CAN_FilterConfig.Enable = 1;//Enable
+        CAN_FilterConfig.ExtFrame = 1;
+        CAN_FilterConfig.FilterMode = 0;
+        CAN_FilterConfig.ID_IDE = 0;
+        CAN_FilterConfig.ID_RTR = 0;
+        CAN_FilterConfig.ID_Std_Ext = 1;
+        CAN_FilterConfig.MASK_IDE = 0;
+        CAN_FilterConfig.MASK_RTR = 0;
+        CAN_FilterConfig.MASK_Std_Ext = 1;
+        ret = controlCan.VCI_SetFilter((byte)0, CAN_FilterConfig);
+        if(ret != ErrorType.ERR_SUCCESS){
+            System.out.println("Set filter failed!\n");
+            System.out.println(String.format("Error code: %d\n",ret));
+            return;
+        }else{
+            System.out.println("Set filter success!\n");
+        }
+
+        // Start CAN
+        ret = controlCan.VCI_StartCAN((byte)0);
+        if(ret != ErrorType.ERR_SUCCESS){
+            System.out.println("Start CAN failed!\n");
+            System.out.println(String.format("Error code: %d\n",ret));
+            return;
+        }else{
+            System.out.println("Start CAN success!\n");
+        }
+
+        while (true) {
+        
+        	try {
+                Thread.sleep(1000);
+            }catch (InterruptedException e) {
+                return;
+            }	
+        	
+        ControlCAN.VCI_CAN_OBJ CAN_SendData[] =  new ControlCAN.VCI_CAN_OBJ[1];
+        for (int i = 0; i < CAN_SendData.length; i++) {
+            CAN_SendData[i] = controlCan.new VCI_CAN_OBJ();
+            CAN_SendData[i].DataLen = 8;
+            CAN_SendData[i].Data = new byte[8];
+            for (int j = 0; j < CAN_SendData[i].DataLen; j++) {
+                CAN_SendData[i].Data[j] = (byte) (8-j);
+        }
+        CAN_SendData[i].ExternFlag = 0;
+        CAN_SendData[i].RemoteFlag = 0;
+        CAN_SendData[i].ID = 0x45A;
+        //CAN_SendData[i].SendType = 2;
+        CAN_SendData[i].SendType = 0;
+        }
+        ret = controlCan.VCI_Transmit((byte)0, CAN_SendData, CAN_SendData.length);
+        if(ret != ErrorType.ERR_SUCCESS){
+            System.out.println("Send CAN data failed!\n");
+            System.out.println(String.format("Error code: %d\n",ret));
+            //return;
+        }else{
+            System.out.println("Send CAN data success!\n");
+        }
+
+        
+        
+        
+        
+       
+        	
+        	
+        	
+        	
+        	
+	        // CAN read data
+	        for (int i = 0; i < CAN_SendData.length; i++)
+	        {
+	            CAN_SendData[i] = controlCan.new VCI_CAN_OBJ();
+	            CAN_SendData[i].Data = new byte[8];
 	        }
-	                //if (msg.STATUS.MSG_CAN_NINT_OK == this.USB_Driver.USB_GetStatus()) break block5;
-	            
-			
+	
+	        int ReadDataNum;
+	        int DataNum = controlCan.VCI_GetReceiveNum((byte)0);
+	        if(DataNum > 0)
+	        {
+	            ReadDataNum = controlCan.VCI_Receive((byte)0, CAN_SendData, CAN_SendData.length);
+	            for(int i = 0; i < ReadDataNum; i++)
+	            {
+	                System.out.println("");
+	                System.out.println("--CAN_ReceiveData.RemoteFlag = "
+	                        + String.format("%d", CAN_SendData[i].RemoteFlag) + "\n");
+	                System.out.println("--CAN_ReceiveData.ExternFlag = "
+	                        + String.format("%d", CAN_SendData[i].ExternFlag) + "\n");
+	                System.out.println("--CAN_ReceiveData.ID = 0x"
+	                        + String.format("%x", CAN_SendData[i].ID) + "\n");
+	                System.out.println("--CAN_ReceiveData.DataLen = "
+	                        + String.format("%d", CAN_SendData[i].DataLen) + "\n");
+	                System.out.println("--CAN_ReceiveData.Data:");
+	                for(int j = 0; j < CAN_SendData[i].DataLen; j++){
+	                    System.out.print(String.format("%x",CAN_SendData[i].Data[j]) + " ");
+	                }
+	                System.out.println();
+	                System.out.println("--CAN_ReceiveData.TimeStamp = "+ String.format("%d", CAN_SendData[i].TimeStamp));
+	            }
+	        }
 	        
+	        //controlCan.VCI_ResetCAN((byte)0);
+        
+        
+        }
+        	
+        //Stop receive can data
+        
 	        
 	
-		
+       
 		 
 	}
 }

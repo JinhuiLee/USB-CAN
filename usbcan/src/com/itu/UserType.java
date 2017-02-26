@@ -25,15 +25,15 @@ public class UserType {
 
     public class PS_MSG {
         public S_MSG value;
-        final /* synthetic */ UserType this$0;
+        final /* synthetic */ UserType type;
 
         public PS_MSG(UserType userType, int dimension) {
-            this.this$0 = userType;
+            this.type = userType;
             this.value = new S_MSG(dimension);
         }
 
         public PS_MSG(UserType userType, byte[] buffer) {
-            this.this$0 = userType;
+            this.type = userType;
             this.value = new S_MSG(buffer);
         }
     }
